@@ -39,7 +39,7 @@ describe('Crowd Rules Engine', () => {
     expect(gate8).toBeDefined();
     expect(gate8?.forecastLevel).toBe('critical');
     expect(gate8?.severity).toBe('SEVERE');
-    expect(gate8?.action).toContain('Dispatch');
+    expect(gate8?.action).toContain('dispatch');
   });
 
   it('calculates WARNING severity for stable crowds that are already busy', () => {
