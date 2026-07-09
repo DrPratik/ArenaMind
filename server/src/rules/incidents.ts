@@ -118,7 +118,7 @@ export function getIncidents(
 
   query += ' ORDER BY timestamp DESC';
 
-  return db.prepare(query).all(...params) as Incident[];
+  return db.prepare(query).all(...params) as unknown as Incident[];
 }
 
 /**

@@ -173,7 +173,7 @@ export async function handleAskRequest(
     const model = ai.getGenerativeModel({
       model: 'gemini-2.5-flash',
       tools: [{
-        functionDeclarations: toolDeclarations,
+        functionDeclarations: toolDeclarations as any,
       }],
       systemInstruction: getSystemPrompt(role, language, ticketInfo),
     });

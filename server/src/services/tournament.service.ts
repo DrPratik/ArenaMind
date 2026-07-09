@@ -29,7 +29,7 @@ export class TournamentService {
 
     const matches = this.db
       .prepare('SELECT * FROM tournament_cache ORDER BY date ASC, time ASC')
-      .all() as TournamentMatch[];
+      .all() as unknown as TournamentMatch[];
 
     const now = new Date().toISOString().split('T')[0];
     const upcoming = matches.filter((m) => m.date >= (now ?? ''));

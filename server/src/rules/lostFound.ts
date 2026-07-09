@@ -25,14 +25,14 @@ export function searchLostFound(
     // Return all unmatched items
     const items = db
       .prepare('SELECT * FROM lost_found WHERE matched = 0 ORDER BY timestamp DESC')
-      .all() as LostFoundItem[];
+      .all() as unknown as LostFoundItem[];
     return { items, matchCount: items.length };
   }
 
   // Build LIKE clauses for keyword matching
   const allItems = db
     .prepare('SELECT * FROM lost_found WHERE matched = 0 ORDER BY timestamp DESC')
-    .all() as LostFoundItem[];
+    .all() as unknown as LostFoundItem[];
 
   const scored = allItems.map((item) => {
     const desc = item.description.toLowerCase();

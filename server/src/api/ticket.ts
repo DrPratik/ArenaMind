@@ -11,7 +11,7 @@ const router = Router();
 router.get('/scan/:qrPayload', (req: Request, res: Response) => {
   try {
     const db = getDb();
-    const qrPayload = req.params.qrPayload;
+    const qrPayload = req.params.qrPayload as string;
 
     const ticket = db
       .prepare('SELECT * FROM tickets WHERE qr_payload = ?')

@@ -35,7 +35,7 @@ export function getGateStatus(db: DatabaseSync, gateId: number): GateStatusResul
  * Get all gates with their current crowd levels.
  */
 export function getAllGateStatuses(db: DatabaseSync): Gate[] {
-  const gates = db.prepare('SELECT * FROM gates ORDER BY id').all() as Gate[];
+  const gates = db.prepare('SELECT * FROM gates ORDER BY id').all() as unknown as Gate[];
   return gates.map((g) => ({ ...g, accessible: Boolean(g.accessible) }));
 }
 
@@ -46,7 +46,7 @@ export function getAllGateStatuses(db: DatabaseSync): Gate[] {
 export function findLeastCrowdedGate(db: DatabaseSync, excludeGateId?: number): Gate | null {
   const crowdOrder: Record<CrowdLevel, number> = { low: 0, moderate: 1, busy: 2, critical: 3 };
 
-  let gates = db.prepare('SELECT * FROM gates').all() as Gate[];
+  let gates = db.prepare('SELECT * FROM gates').all() as unknown as Gate[];
   if (excludeGateId !== undefined) {
     gates = gates.filter((g) => g.id !== excludeGateId);
   }

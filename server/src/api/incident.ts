@@ -71,7 +71,7 @@ router.patch('/:id/status', (req: Request, res: Response): void => {
     }
 
     const db = getDb();
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(req.params.id as string, 10);
     const updated = updateIncidentStatus(db, id, parsed.data.status);
 
     if (updated) {

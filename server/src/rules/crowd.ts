@@ -21,6 +21,8 @@ export interface OverloadRiskResult {
     trend: 'rising' | 'stable' | 'falling';
     trendPercentage: number;
     estimatedMinutesToCritical: number | null;
+    severity?: string;
+    action?: string;
   }>;
 }
 
@@ -58,7 +60,7 @@ export function getCrowdForecast(
     .prepare(
       'SELECT * FROM crowd_log WHERE gate_id = ? ORDER BY timestamp DESC LIMIT 7',
     )
-    .all(gateId) as CrowdLogEntry[];
+    .all(gateId) as unknown as CrowdLogEntry[];
 
   if (logs.length < 2) {
     return {

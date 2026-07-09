@@ -23,7 +23,7 @@ export function getFoodQueue(
     const stall = db.prepare('SELECT * FROM food_stalls WHERE id = ?').get(stallId) as FoodStall | undefined;
     stalls = stall ? [stall] : [];
   } else {
-    stalls = db.prepare('SELECT * FROM food_stalls ORDER BY current_queue_minutes ASC').all() as FoodStall[];
+    stalls = db.prepare('SELECT * FROM food_stalls ORDER BY current_queue_minutes ASC').all() as unknown as FoodStall[];
   }
 
   return stalls.map((s) => {
