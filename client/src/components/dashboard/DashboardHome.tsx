@@ -11,7 +11,7 @@ import type { GateData } from '../../types';
 export default function DashboardHome() {
   const { gates, overloadRisk, refresh } = useCrowd(5000); // Poll faster for the dashboard
   const [selectedGateId, setSelectedGateId] = useState<number | null>(null);
-  const selectedGate = gates.find(g => g.id === selectedGateId) || null;
+  const selectedGate: GateData | null = gates.find(g => g.id === selectedGateId) || null;
   const [briefing, setBriefing] = useState<string>('');
 
   // Auto-generate briefing on load

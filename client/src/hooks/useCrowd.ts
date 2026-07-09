@@ -27,5 +27,5 @@ export function useCrowd(pollingInterval = 10000) {
     return () => clearInterval(interval);
   }, [fetchCrowd, pollingInterval]);
 
-  return { gates, loading, busyGates, refresh: fetchCrowd };
+  return { gates, loading, busyGates, overloadRisk, refresh: fetchCrowd };
 }

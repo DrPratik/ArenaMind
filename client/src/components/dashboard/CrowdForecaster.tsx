@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Data structure representing a gate's predicted crowd overload risk.
  */

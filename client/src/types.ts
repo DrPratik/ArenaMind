@@ -18,6 +18,7 @@ export interface GateData {
 
 export interface CrowdResponse {
   gates: GateData[];
+  overloadRisk?: { gatesAtRisk: any[] } | null;
 }
 
 export interface AskResponse {
