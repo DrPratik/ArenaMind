@@ -62,7 +62,7 @@ app.use((req, res, next) => {
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  const aiMode = process.env.GEMINI_API_KEY ? 'Gemini 1.5 Flash' : 'MockLLM (template fallback)';
+  const aiMode = process.env.GEMINI_API_KEY ? 'Gemini 3.1 Flash Lite' : 'MockLLM (template fallback)';
   console.log(`
   ╔══════════════════════════════════════════════════╗
   ║          🏟️  ArenaMind Server Running            ║
