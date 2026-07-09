@@ -60,4 +60,19 @@ describe('Crowd Rules Engine', () => {
     // Let's just assert it doesn't throw and correctly calculates.
     expect(gate4?.trend).toBe('stable');
   });
+
+  it('returns no risk if the crowd is low and stable', () => {
+    db.prepare('INSERT INTO gates (id, name, current_crowd_level) VALUES (?, ?, ?)').run(1, 'Gate 1', 'low');
+    const insert = db.prepare('INSERT INTO crowd_log (gate_id, crowd_level, timestamp) VALUES (?, ?, ?)');
+    
+    // Stable at 'low' (1)
+    for (let i = 0; i < 7; i++) {
+      insert.run(1, 'low', new Date(Date.now() - i * 5 * 60000).toISOString());
+    }
+
+    const risk = getOverloadRisk(db);
+    const gate1 = risk.gatesAtRisk.find(g => g.gateId === 1);
+    
+    expect(gate1).toBeUndefined(); // Low crowds are not at risk, so it shouldn't be in the array
+  });
 });
