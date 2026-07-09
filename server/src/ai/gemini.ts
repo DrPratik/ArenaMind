@@ -171,7 +171,7 @@ export async function handleAskRequest(
 
   try {
     const model = ai.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       tools: [{
         functionDeclarations: toolDeclarations as any,
       }],
