@@ -151,4 +151,4 @@ export default memo(function StadiumHeatmap({ gates, onGateClick }: StadiumHeatm
       </div>
     </div>
   );
-}
+});
