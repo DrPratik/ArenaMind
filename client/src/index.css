@@ -1,0 +1,231 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@theme {
+  --color-navy-900: #0a0f1e;
+  --color-navy-800: #111827;
+  --color-navy-700: #1a2332;
+  --color-navy-600: #243044;
+  --color-navy-500: #2d3c56;
+  --color-glass: rgba(255, 255, 255, 0.06);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-glass-hover: rgba(255, 255, 255, 0.1);
+  --color-accent-blue: #3b82f6;
+  --color-accent-cyan: #06b6d4;
+  --color-accent-emerald: #10b981;
+  --color-accent-amber: #f59e0b;
+  --color-accent-crimson: #ef4444;
+  --color-crowd-low: #10b981;
+  --color-crowd-moderate: #f59e0b;
+  --color-crowd-busy: #f97316;
+  --color-crowd-critical: #ef4444;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────────── */
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--color-navy-900);
+  color: #e2e8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* ─── Glass Card ────────────────────────────────────────────────────────────── */
+.glass-card {
+  background: var(--color-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+.glass-card:hover {
+  background: var(--color-glass-hover);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ─── Crowd Level Badges ────────────────────────────────────────────────────── */
+.crowd-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.crowd-low { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.crowd-moderate { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.crowd-busy { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+.crowd-critical { background: rgba(239, 68, 68, 0.2); color: #f87171; animation: pulse-critical 2s ease-in-out infinite; }
+
+@keyframes pulse-critical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ─── Priority Badges ───────────────────────────────────────────────────────── */
+.priority-P1 { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.priority-P2 { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+.priority-P3 { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.priority-P4 { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+
+/* ─── Gradient Accents ──────────────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-border {
+  border-image: linear-gradient(135deg, #3b82f6, #06b6d4) 1;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(6, 182, 212, 0.05));
+}
+
+/* ─── Animations ────────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  50% { box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.2); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in { animation: fade-in 0.4s ease-out; }
+.animate-slide-up { animation: slide-up 0.5s ease-out; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+.skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ─── Mic Button ────────────────────────────────────────────────────────────── */
+.mic-button {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+.mic-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 25px rgba(59, 130, 246, 0.4);
+}
+.mic-button.listening {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+  background: linear-gradient(135deg, #ef4444, #f97316);
+}
+
+/* ─── Quick Chips ───────────────────────────────────────────────────────────── */
+.quick-chip {
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.quick-chip:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ─── Accessibility Mode ────────────────────────────────────────────────────── */
+.a11y-mode {
+  font-size: 1.125rem !important;
+}
+.a11y-mode .glass-card {
+  border-width: 2px;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.a11y-mode .crowd-badge {
+  font-size: 0.875rem;
+  padding: 6px 16px;
+}
+.a11y-mode .quick-chip {
+  font-size: 0.95rem;
+  padding: 10px 20px;
+}
+
+/* ─── Focus States ──────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ─── Crowd Alert Banner ────────────────────────────────────────────────────── */
+.crowd-banner {
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.15), rgba(239, 68, 68, 0.1));
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  border-radius: 12px;
+  padding: 12px 16px;
+  animation: slide-up 0.4s ease-out;
+}
+
+/* ─── Stadium SVG ───────────────────────────────────────────────────────────── */
+.stadium-gate {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.stadium-gate:hover {
+  filter: brightness(1.3);
+  transform: scale(1.1);
+}
