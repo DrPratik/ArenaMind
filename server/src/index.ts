@@ -3,6 +3,8 @@ dotenv.config({ path: '../.env' });
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { getDb } from './db/connection.js';
 import { seedDatabase } from './db/seed.js';
 import askRouter from './api/ask.js';
@@ -33,6 +35,14 @@ app.use('/api/organizer', organizerRouter);
 app.use('/api/tournament', tournamentRouter);
 app.use('/api/ticket', ticketRouter);
 
+// ─── Static Frontend Serving (For Production) ────────────────────────────────
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientBuildPath = path.join(__dirname, '..', '..', 'client', 'dist');
+
+// Serve static files from the React app
+app.use(express.static(clientBuildPath));
+
 // ─── Health Check ────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
   const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY);
@@ -41,6 +51,13 @@ app.get('/api/health', (_req, res) => {
     aiMode: hasGeminiKey ? 'gemini' : 'mockLlm',
     timestamp: new Date().toISOString(),
   });
+});
+
+// ─── Catch-All Route for React Router ────────────────────────────────────────
+app.get('*', (req, res, next) => {
+  // Only serve index.html if the request isn't for an API route
+  if (req.path.startsWith('/api/')) return next();
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 // ─── Start ───────────────────────────────────────────────────────────────────
