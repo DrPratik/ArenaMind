@@ -165,7 +165,7 @@ export async function handleAskRequest(
   // Fetch ticket context if fan
   let ticketInfo: { gate_id: number; section: string; seat: string } | undefined;
   if (role === 'fan') {
-    const ticket = db.prepare('SELECT gate_id, section, seat FROM tickets WHERE persona_id = 1 AND status = "valid"').get() as { gate_id: number; section: string; seat: string } | undefined;
+    const ticket = db.prepare("SELECT gate_id, section, seat FROM tickets WHERE persona_id = 1 AND status = 'valid'").get() as { gate_id: number; section: string; seat: string } | undefined;
     if (ticket) ticketInfo = ticket;
   }
 
