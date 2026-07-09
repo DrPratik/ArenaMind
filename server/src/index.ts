@@ -54,9 +54,9 @@ app.get('/api/health', (_req, res) => {
 });
 
 // ─── Catch-All Route for React Router ────────────────────────────────────────
-app.get('*', (req, res, next) => {
-  // Only serve index.html if the request isn't for an API route
-  if (req.path.startsWith('/api/')) return next();
+app.use((req, res, next) => {
+  // Only serve index.html if the request isn't for an API route and is a GET request
+  if (req.path.startsWith('/api/') || req.method !== 'GET') return next();
   res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
