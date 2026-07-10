@@ -1,8 +1,10 @@
 import { useTournament } from '../../hooks/useTournament';
 import { useState, useEffect } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function MatchCountdown() {
   const { nextMatch, loading } = useTournament();
+  const { t } = useLanguage();
   const [countdown, setCountdown] = useState('');
 
   useEffect(() => {
@@ -13,8 +15,13 @@ export default function MatchCountdown() {
       const now = new Date();
       const diff = matchDate.getTime() - now.getTime();
 
+      if (diff <= -120 * 60 * 1000) {
+        setCountdown(t.matchFinished);
+        return;
+      }
+
       if (diff <= 0) {
-        setCountdown('LIVE NOW');
+        setCountdown(t.liveNow);
         return;
       }
 

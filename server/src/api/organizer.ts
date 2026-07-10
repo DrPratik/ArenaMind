@@ -1,13 +1,22 @@
+/**
+ * @module api/organizer
+ * @description Organizer operations center endpoints.
+ *
+ * Provides analytical AI query execution (`GET /api/organizer/query`) and
+ * automated briefing generation (`GET /api/organizer/briefing`) for stadium
+ * operations managers.
+ */
+
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { handleAskRequest } from '../ai/gemini.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
 /**
- * GET /api/organizer/query — natural-language query endpoint for organizers.
- * Routes through the same AI handler with role='organizer' for analytical responses.
+ * `GET /query` — Execute a natural-language operational query.
  */
 router.get('/query', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -16,8 +25,7 @@ router.get('/query', async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ error: 'Missing or invalid query parameter "q"' });
       return;
     }
-    
-    // Defensive programming: prevent overly long queries (Denial of Service mitigation)
+
     if (query.length > 500) {
       res.status(400).json({ error: 'Query too long. Maximum 500 characters.' });
       return;
@@ -28,20 +36,21 @@ router.get('/query', async (req: Request, res: Response): Promise<void> => {
 
     res.json({
       text: response.text,
-      recommendation: response.text, // The organizer prompt forces recommendations
+      recommendation: response.text,
       reasoning: response.structuredCard?.data?.reasoning ?? '',
       data: response.structuredCard?.data ?? {},
       toolsUsed: response.toolsUsed,
     });
   } catch (error) {
-    console.error('Error in GET /api/organizer/query:', error);
+    logger.error('Error in GET /api/organizer/query', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
- * GET /api/organizer/briefing — AI-generated ops briefing card.
- * Summarizes current stadium state in plain English.
+ * `GET /briefing` — Generate an automated operational briefing.
  */
 router.get('/briefing', async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -58,7 +67,9 @@ router.get('/briefing', async (_req: Request, res: Response): Promise<void> => {
       toolsUsed: response.toolsUsed,
     });
   } catch (error) {
-    console.error('Error in GET /api/organizer/briefing:', error);
+    logger.error('Error in GET /api/organizer/briefing', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

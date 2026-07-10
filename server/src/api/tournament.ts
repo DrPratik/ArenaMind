@@ -1,13 +1,21 @@
+/**
+ * @module api/tournament
+ * @description Tournament match schedule and real-time score endpoints.
+ *
+ * `GET /api/tournament` retrieves the FIFA World Cup 2026 match schedule
+ * and live scores via {@link TournamentService}.
+ */
+
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { TournamentService } from '../services/tournament.service.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
 /**
- * GET /api/tournament
- * Clean controller: delegates all business logic to the TournamentService.
+ * `GET /` — Fetch tournament match fixtures and active live scores.
  */
 router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -23,7 +31,9 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
       totalMatches: matches.length,
     });
   } catch (error) {
-    console.error('Error in GET /api/tournament:', error);
+    logger.error('Error in GET /api/tournament', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

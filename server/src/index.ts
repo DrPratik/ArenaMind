@@ -1,10 +1,25 @@
+/**
+ * @module index
+ * @description ArenaMind backend entry point.
+ *
+ * Bootstraps the Express application with security middleware (Helmet, CORS),
+ * initializes the SQLite database, mounts all API route handlers, and serves
+ * the production React build as static assets. In development the Vite dev
+ * server proxies API calls here; in production Express serves everything.
+ *
+ * @see {@link config} for environment variable documentation.
+ */
+
 import dotenv from 'dotenv';
 dotenv.config({ path: '../.env' });
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { config } from './config.js';
+import { logger } from './utils/logger.js';
 import { getDb } from './db/connection.js';
 import { seedDatabase } from './db/seed.js';
 import askRouter from './api/ask.js';
@@ -15,17 +30,16 @@ import tournamentRouter from './api/tournament.js';
 import ticketRouter from './api/ticket.js';
 
 const app = express();
-const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Allow image uploads
+app.use(express.json({ limit: config.maxBodySize }));
 
 // ─── Database Setup ──────────────────────────────────────────────────────────
 const db = getDb();
 seedDatabase(db);
-console.log('✅ Database initialized and seeded');
+logger.info('Database initialized and seeded');
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
 app.use('/api/ask', askRouter);
@@ -40,38 +54,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const clientBuildPath = path.join(__dirname, '..', '..', 'client', 'dist');
 
-// Serve static files from the React app
 app.use(express.static(clientBuildPath));
 
 // ─── Health Check ────────────────────────────────────────────────────────────
+
+/**
+ * `GET /api/health` — Returns server status, AI mode, and current timestamp.
+ * Used by uptime monitors and deployment health checks.
+ */
 app.get('/api/health', (_req, res) => {
-  const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY);
   res.json({
     status: 'ok',
-    aiMode: hasGeminiKey ? 'gemini' : 'mockLlm',
+    aiMode: config.geminiApiKey ? 'gemini' : 'mockLlm',
+    model: config.geminiModel,
     timestamp: new Date().toISOString(),
   });
 });
 
 // ─── Catch-All Route for React Router ────────────────────────────────────────
 app.use((req, res, next) => {
-  // Only serve index.html if the request isn't for an API route and is a GET request
   if (req.path.startsWith('/api/') || req.method !== 'GET') return next();
   res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 // ─── Start ───────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  const aiMode = process.env.GEMINI_API_KEY ? 'Gemini 3.1 Flash Lite' : 'MockLLM (template fallback)';
-  console.log(`
-  ╔══════════════════════════════════════════════════╗
-  ║          🏟️  ArenaMind Server Running            ║
-  ║──────────────────────────────────────────────────║
-  ║  Port:     ${PORT}                                ║
-  ║  AI Mode:  ${aiMode.padEnd(35)}║
-  ║  Database: SQLite (arenamind.db)                 ║
-  ╚══════════════════════════════════════════════════╝
-  `);
+app.listen(config.port, () => {
+  const aiMode = config.geminiApiKey ? `Gemini (${config.geminiModel})` : 'MockLLM (template fallback)';
+  logger.info('ArenaMind server started', {
+    port: config.port,
+    aiMode,
+    environment: config.nodeEnv,
+  });
 });
 
 export default app;

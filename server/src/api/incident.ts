@@ -1,16 +1,27 @@
+/**
+ * @module api/incident
+ * @description Incident report filing and triage endpoints.
+ *
+ * Provides endpoints to file new incident reports (`POST /api/incident`),
+ * list filtered incidents (`GET /api/incident`), and update status
+ * (`PATCH /api/incident/:id/status`). Priority (P1-P4) and target department
+ * are assigned deterministically by the rules engine.
+ */
+
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { fileIncident, getIncidents, updateIncidentStatus } from '../rules/incidents.js';
 import { incidentRequestSchema, incidentStatusUpdateSchema } from './validation.js';
 import { rateLimiter } from '../middleware/rateLimiter.js';
+import { logger } from '../utils/logger.js';
 import type { IncidentType } from '../types.js';
 
 const router = Router();
 
 /**
- * POST /api/incident — submit a new incident report.
- * The rules layer assigns priority and department deterministically.
+ * `POST /` — File a new incident report.
+ * The rules layer assigns priority (P1-P4) and department deterministically.
  */
 router.post('/', rateLimiter, (req: Request, res: Response): void => {
   try {
@@ -23,7 +34,6 @@ router.post('/', rateLimiter, (req: Request, res: Response): void => {
     const { note, location, gate_id, photo_url, type } = parsed.data;
     const db = getDb();
 
-    // Default type inference from keywords if not provided
     const incidentType: IncidentType = type ?? inferIncidentType(note);
 
     const result = fileIncident(db, {
@@ -36,13 +46,15 @@ router.post('/', rateLimiter, (req: Request, res: Response): void => {
 
     res.status(201).json(result);
   } catch (error) {
-    console.error('Error in POST /api/incident:', error);
+    logger.error('Error in POST /api/incident', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
- * GET /api/incident — get all incidents, optionally filtered.
+ * `GET /` — Retrieve all incidents, optionally filtered by status, priority, or gate.
  */
 router.get('/', (req: Request, res: Response): void => {
   try {
@@ -54,13 +66,15 @@ router.get('/', (req: Request, res: Response): void => {
     });
     res.json({ incidents });
   } catch (error) {
-    console.error('Error in GET /api/incident:', error);
+    logger.error('Error in GET /api/incident', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
- * PATCH /api/incident/:id/status — update incident status.
+ * `PATCH /:id/status` — Update the lifecycle status of an incident.
  */
 router.patch('/:id/status', (req: Request, res: Response): void => {
   try {
@@ -80,13 +94,15 @@ router.patch('/:id/status', (req: Request, res: Response): void => {
       res.status(404).json({ error: 'Incident not found' });
     }
   } catch (error) {
-    console.error('Error in PATCH /api/incident/:id/status:', error);
+    logger.error('Error in PATCH /api/incident/:id/status', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
- * Simple keyword-based incident type inference.
+ * Keyword-based incident type inference when not explicitly supplied.
  */
 function inferIncidentType(note: string): IncidentType {
   const lower = note.toLowerCase();

@@ -4,9 +4,11 @@ import { AccessibilityProvider } from './context/AccessibilityContext';
 import Header from './components/shared/Header';
 import FanHome from './components/fan/FanHome';
 import DashboardHome from './components/dashboard/DashboardHome';
+import { useLanguage } from './context/LanguageContext';
 
 function NavTabs() {
   const location = useLocation();
+  const { t } = useLanguage();
   const isFan = location.pathname.startsWith('/fan');
   
   return (
@@ -18,7 +20,7 @@ function NavTabs() {
             isFan ? 'bg-accent-blue text-white shadow-lg' : 'text-white/50 hover:text-white hover:bg-white/5'
           }`}
         >
-          Fan App (PWA)
+          {t.fanAppTab}
         </Link>
         <Link
           to="/dashboard"
@@ -26,7 +28,7 @@ function NavTabs() {
             !isFan ? 'bg-accent-blue text-white shadow-lg' : 'text-white/50 hover:text-white hover:bg-white/5'
           }`}
         >
-          Organizer Dashboard
+          {t.organizerTab}
         </Link>
       </div>
     </div>

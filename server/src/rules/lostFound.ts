@@ -1,3 +1,8 @@
+/**
+ * @module rules/lostFound
+ * @description Deterministic keyword search rules for stadium Lost & Found items.
+ */
+
 import type { DatabaseSync } from 'node:sqlite';
 import type { LostFoundItem } from '../types.js';
 

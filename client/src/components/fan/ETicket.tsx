@@ -1,6 +1,8 @@
 import QRCode from 'react-qr-code';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function ETicket() {
+  const { t } = useLanguage();
   const ticketData = {
     payload: 'ARENAMIND-TCK-8892-G4',
     gate: '4',
@@ -13,7 +15,7 @@ export default function ETicket() {
 
   return (
     <div className="glass-card p-6 flex flex-col items-center animate-scale-up" id="e-ticket">
-      <h3 className="text-xl font-bold text-white mb-1">Your E-Ticket</h3>
+      <h3 className="text-xl font-bold text-white mb-1">{t.eTicketTitle}</h3>
       <p className="text-sm text-white/50 mb-6">{ticketData.match}</p>
 
       <div className="bg-white p-4 rounded-xl mb-6">
@@ -22,15 +24,15 @@ export default function ETicket() {
 
       <div className="grid grid-cols-3 gap-4 w-full text-center border-t border-white/10 pt-4">
         <div>
-          <p className="text-xs text-white/50 uppercase tracking-wider">Gate</p>
+          <p className="text-xs text-white/50 uppercase tracking-wider">{t.gateLabel}</p>
           <p className="text-2xl font-black text-accent-cyan">{ticketData.gate}</p>
         </div>
         <div>
-          <p className="text-xs text-white/50 uppercase tracking-wider">Section</p>
+          <p className="text-xs text-white/50 uppercase tracking-wider">{t.sectionLabel}</p>
           <p className="text-2xl font-black text-white">{ticketData.section}</p>
         </div>
         <div>
-          <p className="text-xs text-white/50 uppercase tracking-wider">Seat</p>
+          <p className="text-xs text-white/50 uppercase tracking-wider">{t.seatLabel}</p>
           <p className="text-2xl font-black text-white">{ticketData.seat}</p>
         </div>
       </div>

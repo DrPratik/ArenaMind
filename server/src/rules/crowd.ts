@@ -1,3 +1,11 @@
+/**
+ * @module rules/crowd
+ * @description Predictive crowd forecasting and overload risk analysis rules engine.
+ *
+ * Implements linear trend extrapolation over time-series crowd logs to predict
+ * gate congestion N minutes ahead, and identifies gates at risk of critical overload.
+ */
+
 import type { DatabaseSync } from 'node:sqlite';
 import type { CrowdLevel, CrowdLogEntry } from '../types.js';
 

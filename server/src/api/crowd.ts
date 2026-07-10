@@ -1,15 +1,25 @@
+/**
+ * @module api/crowd
+ * @description Real-time crowd heatmap and overload risk endpoints.
+ *
+ * Exposes real-time crowd levels per gate (`GET /api/crowd`) along with
+ * predictive overload risk assessments. Also provides an admin mutation
+ * endpoint (`POST /api/crowd/admin`) for simulating crowd surges.
+ */
+
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
 import { getAllGateStatuses, updateGateCrowdLevel } from '../rules/gates.js';
 import { getOverloadRisk } from '../rules/crowd.js';
 import { adminCrowdUpdateSchema } from './validation.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
 /**
- * GET /api/crowd — current crowd levels per gate.
- * Polled by both the fan PWA (for crowd banners) and the dashboard (for the heatmap).
+ * `GET /` — Fetch current crowd levels and overload risk.
+ * Polled by both the fan PWA (for crowd banners) and the organizer dashboard (heatmap).
  */
 router.get('/', (_req: Request, res: Response): void => {
   try {
@@ -28,15 +38,15 @@ router.get('/', (_req: Request, res: Response): void => {
       overloadRisk,
     });
   } catch (error) {
-    console.error('Error in GET /api/crowd:', error);
+    logger.error('Error in GET /api/crowd', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 /**
- * POST /api/admin/crowd — demo control panel endpoint.
- * Mutates a gate's crowd level and logs the change.
- * This is the key "trigger" for the live demo causality loop.
+ * `POST /admin` — Admin mutation endpoint to update a gate's crowd level.
  */
 router.post('/admin', (req: Request, res: Response): void => {
   try {
@@ -55,7 +65,9 @@ router.post('/admin', (req: Request, res: Response): void => {
       res.status(404).json({ error: 'Gate not found' });
     }
   } catch (error) {
-    console.error('Error in POST /api/admin/crowd:', error);
+    logger.error('Error in POST /api/admin/crowd', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });

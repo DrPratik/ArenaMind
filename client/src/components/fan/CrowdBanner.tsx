@@ -1,8 +1,10 @@
 import { useCrowd } from '../../hooks/useCrowd';
 import { useState } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function CrowdBanner() {
   const { busyGates } = useCrowd();
+  const { t } = useLanguage();
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
 
   const visibleAlerts = busyGates.filter((g) => !dismissed.has(g.id));
@@ -22,7 +24,7 @@ export default function CrowdBanner() {
                 {gate.name} is {gate.crowd_level}
               </p>
               <p className="text-xs text-white/60">
-                Consider using a nearby gate for faster entry
+                {t.considerNearbyGate}
               </p>
             </div>
           </div>

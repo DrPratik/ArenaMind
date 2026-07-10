@@ -1,3 +1,8 @@
+/**
+ * @module rules/gates
+ * @description Deterministic gate status and alternative routing rules engine.
+ */
+
 import type { DatabaseSync } from 'node:sqlite';
 import type { Gate, CrowdLevel } from '../types.js';
 

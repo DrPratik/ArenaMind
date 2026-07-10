@@ -1,3 +1,11 @@
+/**
+ * @module rules/routes
+ * @description Deterministic in-venue navigation and accessibility routing rules engine.
+ *
+ * Resolves turn-by-turn paths across stadium graph nodes supporting standard,
+ * step-free wheelchair accessible (`wheelchair`), and crowd-avoiding (`less_crowded`) modes.
+ */
+
 import type { DatabaseSync } from 'node:sqlite';
 import type { Route, RouteStep, RouteMode } from '../types.js';
 

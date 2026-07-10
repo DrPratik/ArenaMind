@@ -1,3 +1,13 @@
+/**
+ * @module rules/incidents
+ * @description Deterministic incident triage and classification rules engine.
+ *
+ * Implements hardcoded priority assignment (`P1`–`P4`) and auto-routing to
+ * operational departments (`Medical Team`, `Security Team`, `Facilities Maintenance`)
+ * based purely on incident type. Ensures emergency incidents are triaged
+ * consistently without LLM latency or hallucination risk.
+ */
+
 import type { DatabaseSync } from 'node:sqlite';
 import type { Incident, IncidentType, IncidentPriority, IncidentStatus } from '../types.js';
 

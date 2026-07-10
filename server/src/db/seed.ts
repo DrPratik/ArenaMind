@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { createSchema } from './schema.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Seeds the database with realistic data for the New York New Jersey Stadium
@@ -311,16 +312,23 @@ function seedTournamentFallback(db: DatabaseSync): void {
     'INSERT INTO tournament_cache (round, date, time, team1, team2, score1, score2, venue, group_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
   );
   const venue = 'New York New Jersey Stadium';
+
+  // Anchor matches around today's date so there is always a thrilling upcoming match
+  const today = new Date();
+  const formatDate = (daysOffset: number): string => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + daysOffset);
+    return d.toISOString().split('T')[0] ?? '2026-07-10';
+  };
+
   const fixtures: Array<[string, string, string, string, string, number | null, number | null, string, string | null]> = [
-    ['Group Stage — Matchday 1', '2026-06-11', '18:00', 'Mexico',    'Indonesia',  null, null, venue, 'Group A'],
-    ['Group Stage — Matchday 1', '2026-06-12', '15:00', 'Argentina', 'Denmark',    null, null, venue, 'Group C'],
-    ['Group Stage — Matchday 2', '2026-06-16', '18:00', 'France',    'Colombia',   null, null, venue, 'Group D'],
-    ['Group Stage — Matchday 2', '2026-06-17', '21:00', 'Brazil',    'Nigeria',    null, null, venue, 'Group E'],
-    ['Group Stage — Matchday 3', '2026-06-22', '18:00', 'Germany',   'Japan',      null, null, venue, 'Group F'],
-    ['Round of 32',              '2026-06-28', '20:00', 'TBD',       'TBD',        null, null, venue, null],
-    ['Quarter-Final',            '2026-07-09', '20:00', 'TBD',       'TBD',        null, null, venue, null],
-    ['Semi-Final',               '2026-07-14', '20:00', 'TBD',       'TBD',        null, null, venue, null],
-    ['Final',                    '2026-07-19', '16:00', 'TBD',       'TBD',        null, null, venue, null],
+    ['Group Stage — Matchday 1', formatDate(-10), '18:00', 'Mexico',    'Indonesia',  2, 1, venue, 'Group A'],
+    ['Group Stage — Matchday 2', formatDate(-6),  '21:00', 'Brazil',    'Nigeria',    3, 0, venue, 'Group E'],
+    ['Round of 16',              formatDate(-3),  '20:00', 'USA',       'Italy',      1, 2, venue, null],
+    ['Quarter-Final',            formatDate(0),   '20:00', 'France',    'Morocco',    null, null, venue, null],
+    ['Quarter-Final',            formatDate(1),   '21:00', 'Brazil',    'England',    null, null, venue, null],
+    ['Semi-Final',               formatDate(4),   '20:00', 'Argentina', 'Spain',      null, null, venue, null],
+    ['Final',                    formatDate(9),   '16:00', 'France',    'Argentina',  null, null, venue, null],
   ];
   for (const f of fixtures) insert.run(...f);
 }
@@ -329,6 +337,6 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '
   const { getDb, closeDb } = await import('./connection.js');
   const db = getDb();
   seedDatabase(db);
-  console.log('✅ Database seeded successfully.');
+  logger.info('Database seeded successfully');
   closeDb();
 }

@@ -1,3 +1,11 @@
+/**
+ * @module rules/food
+ * @description Deterministic food concession query and dietary filtering rules engine.
+ *
+ * Implements hardcoded dietary preference matching (`halal`, `veg`, `gluten_free`)
+ * and queue time sorting across stadium concessions.
+ */
+
 import type { DatabaseSync } from 'node:sqlite';
 import type { FoodStall } from '../types.js';
 

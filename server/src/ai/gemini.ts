@@ -1,6 +1,24 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+/**
+ * @module gemini
+ * @description Core AI orchestration layer for ArenaMind.
+ *
+ * Implements the "rules decide, LLM phrases" architecture:
+ * 1. User messages are sanitized and forwarded to the Gemini model.
+ * 2. Gemini selects tools (function calls) based on intent.
+ * 3. Tool calls are executed against the deterministic rules engine.
+ * 4. Resolved facts are returned to Gemini for natural-language phrasing.
+ *
+ * If the Gemini API is unavailable (no key or quota exceeded), the system
+ * transparently falls back to {@link MockLLM} with keyword-based intent
+ * detection, ensuring the app never crashes or returns empty responses.
+ */
+
+import { GoogleGenerativeAI, type FunctionDeclaration } from '@google/generative-ai';
 import type { DatabaseSync } from 'node:sqlite';
 import type { UserRole, SupportedLanguage, ToolCallResult, AskResponse, StructuredCard } from '../types.js';
+import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
+import { sanitizeText } from '../utils/sanitize.js';
 import { getSystemPrompt } from './prompts.js';
 import { toolDeclarations } from './tools.js';
 import { generateMockResponse } from './mockLlm.js';
@@ -9,17 +27,28 @@ import type { RouteMode, IncidentType } from '../types.js';
 
 let genAI: GoogleGenerativeAI | null = null;
 
+/**
+ * Lazily initialize and cache the Google Generative AI client.
+ * Returns `null` if no API key is configured, triggering the MockLLM fallback.
+ */
 function getGenAI(): GoogleGenerativeAI | null {
   if (genAI) return genAI;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
-  genAI = new GoogleGenerativeAI(apiKey);
+  if (!config.geminiApiKey) return null;
+  genAI = new GoogleGenerativeAI(config.geminiApiKey);
   return genAI;
 }
 
 /**
- * Execute a tool call against the rules layer.
- * The LLM tells us which tool to call, but the actual data comes from deterministic functions.
+ * Execute a tool call against the deterministic rules layer.
+ *
+ * The LLM selects which tool to invoke, but all data resolution happens
+ * through hardcoded algorithms (SQL queries, graph traversal, severity
+ * matrices) — the LLM never generates facts, only selects tools.
+ *
+ * @param db - SQLite database handle.
+ * @param toolName - Name of the tool the LLM selected.
+ * @param args - Arguments extracted by the LLM from the user message.
+ * @returns Resolved data from the rules engine, or an error object.
  */
 function executeToolCall(
   db: DatabaseSync,
@@ -82,7 +111,13 @@ function executeToolCall(
 }
 
 /**
- * Build a structured card from tool results for the frontend.
+ * Build a structured UI card from tool results for the frontend.
+ *
+ * Maps each tool name to a card type (route, food, gate_status, etc.)
+ * so the React frontend can render rich, contextual result cards.
+ *
+ * @param toolResults - Array of resolved tool call results.
+ * @returns A structured card for the primary tool result, or `undefined`.
  */
 function buildStructuredCard(toolResults: ToolCallResult[]): StructuredCard | undefined {
   if (toolResults.length === 0) return undefined;
@@ -145,8 +180,21 @@ function buildStructuredCard(toolResults: ToolCallResult[]): StructuredCard | un
 }
 
 /**
- * Main AI handler: resolves facts via rules, then either calls Gemini for phrasing
- * or falls back to MockLLM templates.
+ * Main AI handler — the central entry point for all user queries.
+ *
+ * Implements the full "rules decide, LLM phrases" pipeline:
+ * 1. Sanitizes user input to strip control chars and cap length.
+ * 2. If Gemini is available, forwards the sanitized message with function declarations.
+ * 3. Executes any tool calls against the deterministic rules layer.
+ * 4. Returns the LLM-phrased response with structured UI cards.
+ * 5. On any Gemini failure (quota, network), gracefully falls back to MockLLM.
+ *
+ * @param db - SQLite database handle.
+ * @param role - The user's role (fan, volunteer, organizer).
+ * @param message - Raw user message (will be sanitized).
+ * @param language - Response language code.
+ * @param imageBase64 - Optional base64-encoded image for multimodal queries.
+ * @returns AI response with text, structured card, and list of tools used.
  */
 export async function handleAskRequest(
   db: DatabaseSync,
@@ -155,11 +203,12 @@ export async function handleAskRequest(
   language: SupportedLanguage,
   imageBase64?: string,
 ): Promise<AskResponse> {
+  // Sanitize user input before any processing
+  const cleanMessage = sanitizeText(message);
   const ai = getGenAI();
 
   if (!ai) {
-    // Fallback: use deterministic intent detection + MockLLM
-    return handleWithMockLLM(db, role, message, language);
+    return handleWithMockLLM(db, role, cleanMessage, language);
   }
 
   // Fetch ticket context if fan
@@ -171,9 +220,9 @@ export async function handleAskRequest(
 
   try {
     const model = ai.getGenerativeModel({
-      model: 'gemini-3.1-flash-lite',
+      model: config.geminiModel,
       tools: [{
-        functionDeclarations: toolDeclarations as any,
+        functionDeclarations: toolDeclarations as FunctionDeclaration[],
       }],
       systemInstruction: getSystemPrompt(role, language, ticketInfo),
     });
@@ -182,7 +231,7 @@ export async function handleAskRequest(
 
     // Build the user message parts
     const messageParts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
-      { text: message },
+      { text: cleanMessage },
     ];
 
     if (imageBase64) {
@@ -229,13 +278,25 @@ export async function handleAskRequest(
       toolsUsed: toolResults.map((t) => t.toolName),
     };
   } catch (error) {
-    console.error('Gemini API error, falling back to MockLLM:', error);
-    return handleWithMockLLM(db, role, message, language);
+    logger.warn('Gemini API error, falling back to MockLLM', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return handleWithMockLLM(db, role, cleanMessage, language);
   }
 }
 
 /**
- * Deterministic fallback: detect intent from keywords, call rules layer, format with templates.
+ * Deterministic fallback when Gemini is unavailable.
+ *
+ * Detects user intent via keyword matching, resolves facts through the
+ * rules engine, and formats responses using pre-built templates.
+ * Guarantees the app always produces a meaningful answer, even offline.
+ *
+ * @param db - SQLite database handle.
+ * @param role - The user's role.
+ * @param message - Sanitized user message.
+ * @param language - Response language code.
+ * @returns Fully formed response with text, card, and tools used.
  */
 function handleWithMockLLM(
   db: DatabaseSync,
@@ -255,8 +316,17 @@ function handleWithMockLLM(
 }
 
 /**
- * Simple keyword-based intent detection for MockLLM fallback.
- * Maps user messages to the appropriate rules-layer calls.
+ * Keyword-based intent detection for the MockLLM fallback path.
+ *
+ * Scans the user message for multilingual keywords (EN, ES, PT, FR, HI, AR)
+ * and maps detected intents to deterministic rules-engine calls. Supports
+ * gate queries, amenity searches, food preferences, incident filing,
+ * crowd forecasting, and accessibility routing.
+ *
+ * @param db - SQLite database handle.
+ * @param message - Sanitized user message.
+ * @param role - The user's role (determines which tools are available).
+ * @returns Array of tool call results from the rules engine.
  */
 function detectIntentAndResolve(
   db: DatabaseSync,
@@ -267,9 +337,18 @@ function detectIntentAndResolve(
   const results: ToolCallResult[] = [];
 
   // Gate status queries
-  const gateMatch = lower.match(/gate\s*(\d+)|puerta\s*(\d+)|portão\s*(\d+)|porte\s*(\d+)|गेट\s*(\d+)|بوابة\s*(\d+)/);
-  if (gateMatch) {
-    const gateId = parseInt(gateMatch[1] ?? gateMatch[2] ?? gateMatch[3] ?? gateMatch[4] ?? gateMatch[5] ?? gateMatch[6], 10);
+  if (/gate|puerta|portão|porte|गेट|بوابة/i.test(lower)) {
+    const numMatch = lower.match(/\b(\d+)\b/);
+    const gateId = numMatch ? parseInt(numMatch[1], 10) : 4;
+    const status = rules.getGateStatus(db, gateId);
+    if (status) {
+      results.push({ toolName: 'getGateStatus', result: status as unknown as Record<string, unknown> });
+    }
+  }
+
+  // Multilingual translation assistance
+  if (/translat|traduc|traduir|अनुवाद|ترجم/i.test(lower)) {
+    const gateId = 4;
     const status = rules.getGateStatus(db, gateId);
     if (status) {
       results.push({ toolName: 'getGateStatus', result: status as unknown as Record<string, unknown> });
@@ -360,6 +439,15 @@ function detectIntentAndResolve(
   return results;
 }
 
+/**
+ * Extract a gate ID (1–8) from multilingual user text.
+ *
+ * Matches patterns like "gate 4", "puerta 2", "portão 3", "porte 5".
+ * Returns `null` if no valid gate reference is found.
+ *
+ * @param text - User message to scan.
+ * @returns Gate ID (1–8) or `null`.
+ */
 function extractGateId(text: string): number | null {
   const match = text.match(/gate\s*(\d+)|puerta\s*(\d+)|portão\s*(\d+)|porte\s*(\d+)|near\s*(\d+)/i);
   if (match) {

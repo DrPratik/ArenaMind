@@ -7,17 +7,10 @@ import CrowdBanner from './CrowdBanner';
 import ResponseCard from './ResponseCard';
 import ETicket from './ETicket';
 
-const QUICK_CHIPS = [
-  { label: '🚪 Find my gate', prompt: 'Help me find my gate' },
-  { label: '🚻 Nearest restroom', prompt: 'Where is the nearest restroom?' },
-  { label: '🍔 Food near me', prompt: 'What food options are near me with the shortest queue?' },
-  { label: '🌐 Translate for me', prompt: 'I need help translating something' },
-  { label: '♿ Wheelchair route', prompt: 'I need an accessible wheelchair route' },
-  { label: '🆘 I need help', prompt: 'I need help, please connect me with assistance' },
-];
+
 
 export default function FanHome() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { accessibilityMode } = useAccessibility();
   const { messages, isLoading, sendMessage } = useChat('fan');
   const [input, setInput] = useState('');
@@ -169,15 +162,15 @@ export default function FanHome() {
         <div className="space-y-6 animate-slide-up">
           <div className="text-center py-6">
             <h2 className="text-2xl sm:text-3xl font-bold gradient-text mb-2">
-              Welcome to ArenaMind
+              {t.welcomeTitle}
             </h2>
             <p className="text-sm text-white/50">
-              Your AI stadium companion • FIFA World Cup 2026
+              {t.welcomeSubtitle}
             </p>
           </div>
 
           <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Quick actions">
-            {QUICK_CHIPS.map((chip) => (
+            {t.quickChips.map((chip) => (
               <button
                 key={chip.prompt}
                 className="quick-chip"
@@ -212,7 +205,7 @@ export default function FanHome() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={accessibilityMode ? 'Type your question here...' : 'Ask ArenaMind anything...'}
+            placeholder={accessibilityMode ? t.inputPlaceholderAccessible : t.inputPlaceholder}
             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent"
             disabled={isLoading}
           />
