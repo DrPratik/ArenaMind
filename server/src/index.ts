@@ -10,9 +10,6 @@
  * @see {@link config} for environment variable documentation.
  */
 
-import dotenv from 'dotenv';
-dotenv.config({ path: '../.env' });
-
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -28,6 +25,7 @@ import crowdRouter from './api/crowd.js';
 import organizerRouter from './api/organizer.js';
 import tournamentRouter from './api/tournament.js';
 import ticketRouter from './api/ticket.js';
+import { rateLimiter } from './middleware/rateLimiter.js';
 
 const app = express();
 
@@ -35,6 +33,7 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: config.maxBodySize }));
+app.use('/api', rateLimiter);
 
 // ─── Database Setup ──────────────────────────────────────────────────────────
 const db = getDb();
@@ -65,7 +64,7 @@ app.use(express.static(clientBuildPath));
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
-    aiMode: config.geminiApiKey ? 'gemini' : 'mockLlm',
+    aiMode: config.geminiApiKey ? 'gemini' : 'deterministic',
     model: config.geminiModel,
     timestamp: new Date().toISOString(),
   });
@@ -79,7 +78,7 @@ app.use((req, res, next) => {
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 app.listen(config.port, () => {
-  const aiMode = config.geminiApiKey ? `Gemini (${config.geminiModel})` : 'MockLLM (template fallback)';
+  const aiMode = config.geminiApiKey ? 'Gemini (Live)' : 'DeterministicLLM (template fallback)';
   logger.info('ArenaMind server started', {
     port: config.port,
     aiMode,

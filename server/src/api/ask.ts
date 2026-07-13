@@ -10,7 +10,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { getDb } from '../db/connection.js';
-import { handleAskRequest } from '../ai/gemini.js';
+import { handleAskRequest, generateDeterministicResponse } from '../ai/index.js';
 import { askRequestSchema } from './validation.js';
 import { rateLimiter } from '../middleware/rateLimiter.js';
 import { logger } from '../utils/logger.js';

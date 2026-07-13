@@ -55,7 +55,7 @@ const VALUE_LEVELS: Record<number, CrowdLevel> = {
 export function getCrowdForecast(
   db: DatabaseSync,
   gateId: number,
-  minutesAhead: number = 20,
+  minutesAhead = 20,
 ): CrowdForecastResult | null {
   const gate = db.prepare('SELECT * FROM gates WHERE id = ?').get(gateId) as
     | { id: number; name: string; current_crowd_level: CrowdLevel }
@@ -136,7 +136,7 @@ export function getOverloadRisk(db: DatabaseSync): OverloadRiskResult {
       const current = gate.current_crowd_level;
       const trend = forecast.trendPercentage;
 
-      let forecastLevel = forecast.forecastLevel;
+      const forecastLevel = forecast.forecastLevel;
       let reasoning = `stable ${trend}%`;
       let timeToCritical: number | null = null;
       let severity = 'LOW';

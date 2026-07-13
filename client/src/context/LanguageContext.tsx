@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { SupportedLanguage } from '../types';
 import { TRANSLATIONS, type Translations } from '../utils/translations';
 
@@ -18,11 +18,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<SupportedLanguage>('en');
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
 
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  }, [language]);
+
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      <div lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        {children}
-      </div>
+      {children}
     </LanguageContext.Provider>
   );
 }

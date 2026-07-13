@@ -203,6 +203,7 @@ export default function FanHome() {
           <input
             id="chat-input"
             type="text"
+            aria-label={accessibilityMode ? t.inputPlaceholderAccessible : t.inputPlaceholder}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={accessibilityMode ? t.inputPlaceholderAccessible : t.inputPlaceholder}

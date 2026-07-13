@@ -9,14 +9,14 @@
  *
  * Secrets (e.g. `GEMINI_API_KEY`) are **never** hard-coded — they are
  * read from the environment and may be absent, in which case the app
- * gracefully falls back to the offline {@link MockLLM}.
+ * gracefully falls back to the offline {@link DeterministicLLM}.
  */
 
 /** Validated, immutable application settings. */
 export interface AppConfig {
   /** HTTP port the server listens on. */
   readonly port: number;
-  /** Gemini API key. Absent → MockLLM fallback. */
+  /** Gemini API key. Absent → DeterministicLLM fallback. */
   readonly geminiApiKey: string | undefined;
   /** Gemini model identifier (e.g. `gemini-3.1-flash-lite`). */
   readonly geminiModel: string;
@@ -34,6 +34,15 @@ export interface AppConfig {
   readonly maxInputLength: number;
 }
 
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config();
+
 /**
  * Load and validate configuration from environment variables.
  *
@@ -41,12 +50,13 @@ export interface AppConfig {
  * Throws if any required numeric variable is malformed.
  */
 function loadConfig(): AppConfig {
+  const nodeEnv = process.env.NODE_ENV ?? 'development';
   return Object.freeze({
     port: parseInt(process.env.PORT ?? '3001', 10),
-    geminiApiKey: process.env.GEMINI_API_KEY || undefined,
+    geminiApiKey: nodeEnv === 'test' ? undefined : (process.env.GEMINI_API_KEY || undefined),
     geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.1-flash-lite',
-    footballDataApiKey: process.env.FOOTBALL_DATA_API_KEY || undefined,
-    nodeEnv: process.env.NODE_ENV ?? 'development',
+    footballDataApiKey: nodeEnv === 'test' ? undefined : (process.env.FOOTBALL_DATA_API_KEY || undefined),
+    nodeEnv,
     maxBodySize: '10mb',
     rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX ?? '30', 10),
     rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '60000', 10),

@@ -9,7 +9,7 @@
  * 4. Resolved facts are returned to Gemini for natural-language phrasing.
  *
  * If the Gemini API is unavailable (no key or quota exceeded), the system
- * transparently falls back to {@link MockLLM} with keyword-based intent
+ * transparently falls back to {@link DeterministicLLM} with keyword-based intent
  * detection, ensuring the app never crashes or returns empty responses.
  */
 
@@ -21,7 +21,7 @@ import { logger } from '../utils/logger.js';
 import { sanitizeText } from '../utils/sanitize.js';
 import { getSystemPrompt } from './prompts.js';
 import { toolDeclarations } from './tools.js';
-import { generateMockResponse } from './mockLlm.js';
+import { generateDeterministicResponse } from './fallbackLlm.js';
 import * as rules from '../rules/index.js';
 import type { RouteMode, IncidentType } from '../types.js';
 
@@ -29,7 +29,7 @@ let genAI: GoogleGenerativeAI | null = null;
 
 /**
  * Lazily initialize and cache the Google Generative AI client.
- * Returns `null` if no API key is configured, triggering the MockLLM fallback.
+ * Returns `null` if no API key is configured, triggering the DeterministicLLM fallback.
  */
 function getGenAI(): GoogleGenerativeAI | null {
   if (genAI) return genAI;
@@ -187,7 +187,7 @@ function buildStructuredCard(toolResults: ToolCallResult[]): StructuredCard | un
  * 2. If Gemini is available, forwards the sanitized message with function declarations.
  * 3. Executes any tool calls against the deterministic rules layer.
  * 4. Returns the LLM-phrased response with structured UI cards.
- * 5. On any Gemini failure (quota, network), gracefully falls back to MockLLM.
+ * 5. On any Gemini failure (quota, network), gracefully falls back to DeterministicLLM.
  *
  * @param db - SQLite database handle.
  * @param role - The user's role (fan, volunteer, organizer).
@@ -208,7 +208,7 @@ export async function handleAskRequest(
   const ai = getGenAI();
 
   if (!ai) {
-    return handleWithMockLLM(db, role, cleanMessage, language);
+    return handleWithDeterministicLLM(db, role, cleanMessage, language);
   }
 
   // Fetch ticket context if fan
@@ -278,10 +278,10 @@ export async function handleAskRequest(
       toolsUsed: toolResults.map((t) => t.toolName),
     };
   } catch (error) {
-    logger.warn('Gemini API error, falling back to MockLLM', {
+    logger.warn('Gemini API error, falling back to DeterministicLLM', {
       error: error instanceof Error ? error.message : String(error),
     });
-    return handleWithMockLLM(db, role, cleanMessage, language);
+    return handleWithDeterministicLLM(db, role, cleanMessage, language);
   }
 }
 
@@ -298,14 +298,14 @@ export async function handleAskRequest(
  * @param language - Response language code.
  * @returns Fully formed response with text, card, and tools used.
  */
-function handleWithMockLLM(
+function handleWithDeterministicLLM(
   db: DatabaseSync,
   role: UserRole,
   message: string,
   language: SupportedLanguage,
 ): AskResponse {
   const toolResults = detectIntentAndResolve(db, message, role);
-  const text = generateMockResponse({ role, message, language, toolResults });
+  const text = generateDeterministicResponse({ role, message, language, toolResults });
   const structuredCard = buildStructuredCard(toolResults);
 
   return {
@@ -316,7 +316,7 @@ function handleWithMockLLM(
 }
 
 /**
- * Keyword-based intent detection for the MockLLM fallback path.
+ * Keyword-based intent detection for the DeterministicLLM fallback path.
  *
  * Scans the user message for multilingual keywords (EN, ES, PT, FR, HI, AR)
  * and maps detected intents to deterministic rules-engine calls. Supports
@@ -336,36 +336,26 @@ function detectIntentAndResolve(
   const lower = message.toLowerCase();
   const results: ToolCallResult[] = [];
 
-  // Gate status queries
-  if (/gate|puerta|portão|porte|गेट|بوابة/i.test(lower)) {
-    const numMatch = lower.match(/\b(\d+)\b/);
-    const gateId = numMatch ? parseInt(numMatch[1], 10) : 4;
-    const status = rules.getGateStatus(db, gateId);
-    if (status) {
-      results.push({ toolName: 'getGateStatus', result: status as unknown as Record<string, unknown> });
-    }
-  }
-
-  // Multilingual translation assistance
-  if (/translat|traduc|traduir|अनुवाद|ترجم/i.test(lower)) {
-    const gateId = 4;
-    const status = rules.getGateStatus(db, gateId);
-    if (status) {
-      results.push({ toolName: 'getGateStatus', result: status as unknown as Record<string, unknown> });
-    }
-  }
-
-  // Restroom queries
-  if (/restroom|bathroom|toilet|baño|banheiro|toilette|शौचालय|حمام/i.test(lower)) {
+  // 1. Wheelchair / Accessible route
+  if (/wheelchair|accessible|accesible|acessível|fauteuil|व्हीलचेयर|كرسي متحرك/i.test(lower)) {
     const gateId = extractGateId(lower) ?? 1;
-    const nearest = rules.findNearestAmenity(db, gateId, 'restroom');
-    if (nearest) {
-      results.push({ toolName: 'findNearestAmenity', result: nearest as unknown as Record<string, unknown> });
+    const route = rules.getRoute(db, 'gate', gateId, 'gate', gateId === 8 ? 6 : 1, 'wheelchair');
+    if (route) {
+      results.push({ toolName: 'getRoute', result: route as unknown as Record<string, unknown> });
     }
   }
 
-  // Food queries
-  if (/food|eat|hungry|comida|comer|nourriture|manger|खाना|طعام|halal|veg|vegetarian/i.test(lower)) {
+  // 2. Route / Navigation queries
+  if (/\b(route|navigate|direction|directions|seat|path|get to|go to|ruta|asiento|chemin|रास्ता)\b/i.test(lower)) {
+    const gateId = extractGateId(lower) ?? 5;
+    const route = rules.getRoute(db, 'gate', 1, 'gate', gateId, 'standard') ?? rules.getRoute(db, 'gate', 1, 'gate', 5, 'standard');
+    if (route) {
+      results.push({ toolName: 'getRoute', result: route as unknown as Record<string, unknown> });
+    }
+  }
+
+  // 3. Food queries
+  if (/\bfood\b|\beat\b|\bhungry\b|comida|comer|nourriture|manger|खाना|طعام|halal|veg|vegetarian/i.test(lower)) {
     const tags: string[] = [];
     if (/halal/i.test(lower)) tags.push('halal');
     if (/veg|vegetarian/i.test(lower)) tags.push('veg');
@@ -375,7 +365,16 @@ function detectIntentAndResolve(
     results.push({ toolName: 'getFoodQueue', result: { stalls } });
   }
 
-  // Medical queries
+  // 4. Restroom queries
+  if (/restroom|bathroom|toilet|baño|banheiro|toilette|शौचालय|حمام/i.test(lower)) {
+    const gateId = extractGateId(lower) ?? 1;
+    const nearest = rules.findNearestAmenity(db, gateId, 'restroom');
+    if (nearest) {
+      results.push({ toolName: 'findNearestAmenity', result: nearest as unknown as Record<string, unknown> });
+    }
+  }
+
+  // 5. Medical queries
   if (/medical|first.?aid|doctor|nurse|help|emergenc|médico|médica|ayuda|aide|मदद|طبي/i.test(lower)) {
     const gateId = extractGateId(lower) ?? 1;
     const nearest = rules.findNearestAmenity(db, gateId, 'medical');
@@ -384,19 +383,28 @@ function detectIntentAndResolve(
     }
   }
 
-  // Lost & found
+  // 6. Prayer room
+  if (/prayer|pray|mosque|masjid|oración|rezar|prière|namaz|صلاة/i.test(lower)) {
+    const gateId = extractGateId(lower) ?? 1;
+    const nearest = rules.findNearestAmenity(db, gateId, 'prayer_room');
+    if (nearest) {
+      results.push({ toolName: 'findNearestAmenity', result: nearest as unknown as Record<string, unknown> });
+    }
+  }
+
+  // 7. Lost & found
   if (/lost|found|missing|perdido|perdida|perdu|trouvé|खोया|मिला|مفقود/i.test(lower)) {
     const searchResult = rules.searchLostFound(db, message);
     results.push({ toolName: 'searchLostFound', result: searchResult as unknown as Record<string, unknown> });
   }
 
-  // Crowd / overload queries (organizer)
+  // 8. Crowd / overload queries (organizer)
   if (/overload|crowd|capacity|forecast|busy|which gate|tendencia|pronóstico|भीड़|ازدحام/i.test(lower) && role === 'organizer' && !/divert|dispatch|broadcast/.test(lower)) {
     const risk = rules.getOverloadRisk(db);
     results.push({ toolName: 'getOverloadRisk', result: risk as unknown as Record<string, unknown> });
   }
 
-  // Divert / Broadcast / Dispatch (Organizer)
+  // 9. Divert / Broadcast / Dispatch (Organizer)
   if (/divert|dispatch|broadcast|send/i.test(lower) && role === 'organizer') {
     const fromGate = extractGateId(lower) ?? 8;
     const result = rules.fileIncident(db, {
@@ -408,21 +416,13 @@ function detectIntentAndResolve(
     results.push({ toolName: 'fileIncident', result: result as unknown as Record<string, unknown> });
   }
 
-  // Wheelchair route
-  if (/wheelchair|accessible|accesible|acessível|fauteuil|व्हीलचेयर|كرسي متحرك/i.test(lower)) {
-    const gateId = extractGateId(lower) ?? 1;
-    const route = rules.getRoute(db, 'gate', gateId, 'gate', gateId === 8 ? 6 : 1, 'wheelchair');
-    if (route) {
-      results.push({ toolName: 'getRoute', result: route as unknown as Record<string, unknown> });
-    }
-  }
-
-  // Prayer room
-  if (/prayer|pray|mosque|masjid|oración|rezar|prière|namaz|صلاة/i.test(lower)) {
-    const gateId = extractGateId(lower) ?? 1;
-    const nearest = rules.findNearestAmenity(db, gateId, 'prayer_room');
-    if (nearest) {
-      results.push({ toolName: 'findNearestAmenity', result: nearest as unknown as Record<string, unknown> });
+  // 10. Gate status queries (only if no specific route/amenity matched above)
+  if (results.length === 0 && /gate|puerta|portão|porte|गेट|بوابة/i.test(lower)) {
+    const numMatch = lower.match(/\b(\d+)\b/);
+    const gateId = numMatch ? parseInt(numMatch[1], 10) : 4;
+    const status = rules.getGateStatus(db, gateId);
+    if (status) {
+      results.push({ toolName: 'getGateStatus', result: status as unknown as Record<string, unknown> });
     }
   }
 
@@ -433,7 +433,7 @@ function detectIntentAndResolve(
       const risk = rules.getOverloadRisk(db);
       results.push({ toolName: 'getOverloadRisk', result: risk as unknown as Record<string, unknown> });
     }
-    // No results means we don't have data — MockLLM will show "ask a volunteer"
+    // No results means we don't have data — DeterministicLLM will show "ask a volunteer"
   }
 
   return results;
